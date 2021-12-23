@@ -9,6 +9,7 @@
 #include <QStandardItemModel>
 #include <vector>
 #include "hotel/hotel.h"
+#include "csvfilemodel.h"
 
 class MainWindow : public QMainWindow
 {
@@ -25,7 +26,6 @@ private slots:
 
     void clearTable();
 
-    void writeToFile(QFile *file);
 
 private:
     QLineEdit *searchBox;
@@ -34,12 +34,14 @@ private:
     std::vector<hotelSystem::Hotel> hotels;
     std::vector<hotelSystem::Hotel> deletedHotels;
 
-    QFile *file;
+    CsvFileModel *csvFileModel;
 
     QTableView *tableView;
     QStandardItemModel *tableModel;
 
     void createMenu();
+
+    QList<QList<QString>> getConvertedData();
 
 public:
     MainWindow(QWidget *parent = 0);

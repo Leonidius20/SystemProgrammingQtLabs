@@ -9,10 +9,13 @@
 #include <QFile>
 #include <QIODevice>
 #include <QTextStream>
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    csvFileModel = nullptr;
+
     setWindowTitle("Hotel");
     setGeometry(100, 100, 1290, 720);
     setMinimumSize(200, 200);
@@ -32,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     tableView->setGeometry(10, 80, 1270, 600);
 
     tableModel = new QStandardItemModel(this);
-    tableModel->setColumnCount(6);
+    tableModel->setColumnCount(8);
     clearTable();
     tableView->setModel(tableModel);
 
@@ -57,6 +60,7 @@ void MainWindow::createMenu() {
 
     auto saveAction = new QAction("Save", this);
     connect(saveAction, &QAction::triggered, this, &MainWindow::handleMenuSave);
+    saveAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_S));
     fileMenu->addAction(saveAction);
 
     auto saveAsAction = new QAction("Save As", this);
@@ -69,69 +73,64 @@ void MainWindow::createMenu() {
 }
 
 void MainWindow::handleSearchButton() {
-    textBox->setText(searchBox->text());
+    // textBox->setText(searchBox->text());
 }
 
 void MainWindow::handleMenuOpen() {
-    QString path = QFileDialog::getOpenFileName(this, "Open hotel list file", "/~", "csv files(*.csv)");
+    QString path = QFileDialog::getOpenFileName(this, "Open hotel list file", QDir::homePath(), "csv files(*.csv)");
+
     if (!path.isEmpty()) {
         clearTable();
+        csvFileModel = new CsvFileModel(path);
+        auto data = csvFileModel->getAll();
 
-        file = new QFile(path);
-        if (file->open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream stream(file);
-            while (!stream.atEnd()) {
-                QString line = stream.readLine();
-                QList<QStandardItem*> items;
-                for (QString item : line.split(",")) {
-                    items.append(new QStandardItem(item));
-                }
-                tableModel->insertRow(tableModel->rowCount(), items);
-            }
-            file->close();
+        for (auto row: data) {
+            tableModel->insertRow(tableModel->rowCount(), row);
         }
     }
+
 }
 
 void MainWindow::handleMenuSave() {
-    if (file != nullptr) {
-        writeToFile(file);
+    if (csvFileModel != nullptr) {
+        csvFileModel->update(getConvertedData());
     } else handleMenuSaveAs();
 }
 
 void MainWindow::handleMenuSaveAs() {
-    QString path = QFileDialog::getSaveFileName(this, "Save hotel data", "/~", "csv files(*.csv)");
+    QString path = QFileDialog::getSaveFileName(this, "Save hotel data", QDir::homePath(), "csv files(*.csv)");
     if (!path.isEmpty()) {
-        file = new QFile(path);
-        writeToFile(file);
+        if (csvFileModel != nullptr) delete csvFileModel;
+        csvFileModel = new CsvFileModel(path);
+
+        csvFileModel->update(getConvertedData());
     }
 }
 
 void MainWindow::clearTable() {
-    file = nullptr;
+    if (csvFileModel != nullptr) {
+        delete csvFileModel;
+        csvFileModel = nullptr;
+    }
+
     tableModel->clear();
     tableModel->setHorizontalHeaderLabels(
                 QStringList() << "Code" << "Name" << "Country"
-                << "City" << "Address" << "Stars");
+                << "City" << "Address" << "Stars" << "Contact Name" << "Contact Phone");
 }
 
-void MainWindow::writeToFile(QFile *file) {
-    if (file->open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QString textData;
-        int rows = tableModel->rowCount();
-        int columns = tableModel->columnCount();
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < columns; j++) {
-                textData += tableModel->data(tableModel->index(i, j)).toString();
-                if (j != columns - 1) textData += ",";
-            }
-            textData += "\n";
+QList<QList<QString>> MainWindow::getConvertedData() {
+    QList<QList<QString>> result;
+    int rows = tableModel->rowCount();
+    int columns = tableModel->columnCount();
+    for (int i = 0; i < rows; i++) {
+        QList<QString> row;
+        for (int j = 0; j < columns; j++) {
+            row.append(tableModel->data(tableModel->index(i, j)).toString());
         }
-
-        QTextStream out(file);
-        out << textData;
-        file->close();
+        result.append(row);
     }
+    return result;
 }
 
 void MainWindow::handleAddButton() {
@@ -148,5 +147,5 @@ void MainWindow::handleDeleteButton() {
 
 MainWindow::~MainWindow()
 {
-
+    if (csvFileModel != nullptr) delete csvFileModel;
 }
