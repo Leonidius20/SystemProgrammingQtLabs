@@ -43,8 +43,10 @@ private:
     IModel *dataModel;
 
     QTableView *tableView;
-    QAbstractItemModel *tableModel;
+    QStandardItemModel *csvTableModel;
     QSqlTableModel *sqlTableModel;
+
+    CsvFileModel *csvFileModel;
 
 
     DatabaseConnection *connection;

@@ -11,6 +11,7 @@
 #include <QTextStream>
 #include <QDebug>
 #include <QSqlTableModel>
+#include "csvtablemodel.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -36,10 +37,10 @@ MainWindow::MainWindow(QWidget *parent)
     tableView = new QTableView(this);
     tableView->setGeometry(10, 80, 1270, 600);
 
-    tableModel = new QStandardItemModel(this);
-    // tableModel->setColumnCount(8);
+    csvTableModel = new QStandardItemModel(this);
+    csvTableModel->setColumnCount(8);
     clearTable();
-    tableView->setModel(tableModel);
+    tableView->setModel(csvTableModel);
 
     QPushButton *addButton = new QPushButton("Add", this);
     addButton->setGeometry(10, 690, 60, 20);
@@ -85,23 +86,17 @@ void MainWindow::handleSearchButton() {
 void MainWindow::handleMenuOpen() {
     QString path = QFileDialog::getOpenFileName(this, "Open hotel list file", QDir::homePath(), "csv files(*.csv)");
 
-    if (modelType == MODEL_DB) {
-        modelType = MODEL_FILE;
-        tableModel = new QStandardItemModel(this);
-        dynamic_cast<QStandardItemModel*>(tableModel)->setColumnCount(8);
-        tableView->setModel(tableModel);
-    }
-
     if (!path.isEmpty()) {
         clearTable();
+
         dataModel = new CsvFileModel(path);
         auto data = dataModel->getAll();
 
         for (auto row: data) {
-            // tableModel->insertRow()
-
-            dynamic_cast<QStandardItemModel*>(tableModel)->insertRow(tableModel->rowCount(), row);
+            csvTableModel->insertRow(csvTableModel->rowCount(), row);
         }
+
+        modelType = MODEL_FILE;
     }
 
 }
@@ -113,25 +108,27 @@ void MainWindow::handleMenuConnectDb() {
     sqlTableModel->setHeaderData(0, Qt::Horizontal, "Code");
     sqlTableModel->setHeaderData(1, Qt::Horizontal, "Name");
     sqlTableModel->select();
-    tableModel = sqlTableModel;
-    tableView->setModel(tableModel);
+    tableView->setModel(sqlTableModel);
+    modelType = MODEL_DB;
 }
 
 void MainWindow::handleMenuSave() {
-    if (dataModel != nullptr) {
+    if (dataModel != nullptr && modelType == MODEL_FILE) {
         dataModel->update(getConvertedData());
-    } else if (sqlTableModel != nullptr) {
+    } else if (sqlTableModel != nullptr && modelType == MODEL_DB) {
         sqlTableModel->submitAll();
     } else handleMenuSaveAs();
 }
 
 void MainWindow::handleMenuSaveAs() {
-    QString path = QFileDialog::getSaveFileName(this, "Save hotel data", QDir::homePath(), "csv files(*.csv)");
-    if (!path.isEmpty()) {
-        if (dataModel != nullptr) delete dataModel;
-        dataModel = new CsvFileModel(path);
+    if (modelType == MODEL_FILE) {
+        QString path = QFileDialog::getSaveFileName(this, "Save hotel data", QDir::homePath(), "csv files(*.csv)");
+        if (!path.isEmpty()) {
+            if (dataModel != nullptr) delete dataModel;
+            dataModel = new CsvFileModel(path);
 
-        dataModel->update(getConvertedData());
+            dataModel->update(getConvertedData());
+        }
     }
 }
 
@@ -141,22 +138,22 @@ void MainWindow::clearTable() {
         dataModel = nullptr;
     }
 
-
-
-    //tableModel->clear();
-    //tableModel->setHorizontalHeaderLabels(
-    //            QStringList() << "Code" << "Name" << "Country"
-    //            << "City" << "Address" << "Stars" << "Contact Name" << "Contact Phone");
+    if (modelType == MODEL_FILE) {
+        csvTableModel->clear();
+        csvTableModel->setHorizontalHeaderLabels(
+                    QStringList() << "Code" << "Name" << "Country"
+                   << "City" << "Address" << "Stars" << "Contact Name" << "Contact Phone");
+    }
 }
 
 QList<QList<QString>> MainWindow::getConvertedData() {
     QList<QList<QString>> result;
-    int rows = tableModel->rowCount();
-    int columns = tableModel->columnCount();
+    int rows = csvTableModel->rowCount();
+    int columns = csvTableModel->columnCount();
     for (int i = 0; i < rows; i++) {
         QList<QString> row;
         for (int j = 0; j < columns; j++) {
-            row.append(tableModel->data(tableModel->index(i, j)).toString());
+            row.append(csvTableModel->data(csvTableModel->index(i, j)).toString());
         }
         result.append(row);
     }
@@ -164,15 +161,28 @@ QList<QList<QString>> MainWindow::getConvertedData() {
 }
 
 void MainWindow::handleAddButton() {
-    int row = tableModel->rowCount();
-    tableModel->insertRow(row);
-    QModelIndex index = tableModel->index(row, 0);
-    tableView->setCurrentIndex(index);
-    tableView->edit(index);
+    if (modelType == MODEL_FILE) {
+        int row = csvTableModel->rowCount();
+        csvTableModel->insertRow(row);
+        QModelIndex index = csvTableModel->index(row, 0);
+        tableView->setCurrentIndex(index);
+        tableView->edit(index);
+    } else {
+        int row = sqlTableModel->rowCount();
+        sqlTableModel->insertRow(row);
+        QModelIndex index = sqlTableModel->index(row, 0);
+        tableView->setCurrentIndex(index);
+        tableView->edit(index);
+    }
+
 }
 
 void MainWindow::handleDeleteButton() {
-    tableModel->removeRows(tableView->currentIndex().row(), 1);
+    if (modelType == MODEL_FILE) {
+        csvTableModel->removeRows(tableView->currentIndex().row(), 1);
+    } else {
+        sqlTableModel->removeRows(tableView->currentIndex().row(), 1);
+    }
 }
 
 MainWindow::~MainWindow()

@@ -30,7 +30,8 @@ SOURCES += \
         hotel/hotel.cpp \
     databaseconnection.cpp \
     csvfilemodel.cpp \
-    databasemodel.cpp
+    databasemodel.cpp \
+    csvtablemodel.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -39,7 +40,8 @@ HEADERS += \
     databaseconnection.h \
     imodel.h \
     csvfilemodel.h \
-    databasemodel.h
+    databasemodel.h \
+    csvtablemodel.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
