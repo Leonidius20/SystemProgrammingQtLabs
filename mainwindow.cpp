@@ -80,7 +80,16 @@ void MainWindow::createMenu() {
 }
 
 void MainWindow::handleSearchButton() {
-    // textBox->setText(searchBox->text());
+    QString query = searchBox->text();
+    if (query.isEmpty()) return;
+    auto model = tableView->model();
+    auto indexes = model->match(
+                model->index(0, 1), Qt::EditRole, query);
+    if (indexes.length() > 0) {
+        auto index = indexes.at(0);
+        tableView->setCurrentIndex(index);
+        tableView->scrollTo(index);
+    }
 }
 
 void MainWindow::handleMenuOpen() {
@@ -97,6 +106,7 @@ void MainWindow::handleMenuOpen() {
         }
 
         modelType = MODEL_FILE;
+        tableView->setModel(csvTableModel);
     }
 
 }
