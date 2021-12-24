@@ -10,5 +10,8 @@ private:
 
 public:
     DatabaseConnection();
+
+    const QSqlDatabase &get() { return db; }
+
     ~DatabaseConnection();
 };

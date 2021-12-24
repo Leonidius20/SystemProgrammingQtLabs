@@ -7,9 +7,11 @@
 #include <QFile>
 #include <QTableView>
 #include <QStandardItemModel>
+#include <QSqlTableModel>
 #include <vector>
 #include "hotel/hotel.h"
 #include "csvfilemodel.h"
+#include "databaseconnection.h"
 
 class MainWindow : public QMainWindow
 {
@@ -23,21 +25,31 @@ private slots:
     void handleMenuOpen();
     void handleMenuSave();
     void handleMenuSaveAs();
+    void handleMenuConnectDb();
 
     void clearTable();
 
 
 private:
+    const QString MODEL_FILE = "file";
+    const QString MODEL_DB = "db";
+
     QLineEdit *searchBox;
     QTextEdit *textBox;
 
     std::vector<hotelSystem::Hotel> hotels;
     std::vector<hotelSystem::Hotel> deletedHotels;
 
-    CsvFileModel *csvFileModel;
+    IModel *dataModel;
 
     QTableView *tableView;
-    QStandardItemModel *tableModel;
+    QAbstractItemModel *tableModel;
+    QSqlTableModel *sqlTableModel;
+
+
+    DatabaseConnection *connection;
+
+    QString modelType = MODEL_FILE;
 
     void createMenu();
 
